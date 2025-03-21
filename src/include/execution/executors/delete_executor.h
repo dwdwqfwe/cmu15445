@@ -12,10 +12,13 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "common/rid.h"
+#include "concurrency/transaction.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/delete_plan.h"
@@ -58,8 +61,11 @@ class DeleteExecutor : public AbstractExecutor {
  private:
   /** The delete plan node to be executed */
   const DeletePlanNode *plan_;
-
+  bool is_insert_{false};
   /** The child executor from which RIDs for deleted tuples are pulled */
   std::unique_ptr<AbstractExecutor> child_executor_;
+  Transaction *txn_;
+  TransactionManager *txn_manager_;
+  std::vector<std::pair<Tuple, RID>> store_;
 };
 }  // namespace bustub

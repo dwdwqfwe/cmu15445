@@ -1,21 +1,26 @@
 #pragma once
 
+#include "common/logger.h"
 #include "storage/page/page.h"
 
 namespace bustub {
 
 class BufferPoolManager;
+class ReadPageGuard;
+class WritePageGuard;
 
 class BasicPageGuard {
  public:
   BasicPageGuard() = default;
 
-  BasicPageGuard(BufferPoolManager *bpm, Page *page) : bpm_(bpm), page_(page) {}
+  BasicPageGuard(BufferPoolManager *bpm, Page *page) : bpm_(bpm), page_(page) {
+    // LOG_DEBUG("page_id= %d", page->GetPageId());
+  }
 
   BasicPageGuard(const BasicPageGuard &) = delete;
   auto operator=(const BasicPageGuard &) -> BasicPageGuard & = delete;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Move constructor for BasicPageGuard
    *
@@ -27,7 +32,7 @@ class BasicPageGuard {
    */
   BasicPageGuard(BasicPageGuard &&that) noexcept;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Drop a page guard
    *
@@ -38,7 +43,7 @@ class BasicPageGuard {
    */
   void Drop();
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Move assignment for BasicPageGuard
    *
@@ -58,6 +63,28 @@ class BasicPageGuard {
    * the page guard was dropped.
    */
   ~BasicPageGuard();
+
+  /** TODO(P2): Add implementation
+   *
+   * @brief Upgrade a BasicPageGuard to a ReadPageGuard
+   *
+   * The protected page is not evicted from the buffer pool during the upgrade,
+   * and the basic page guard should be made invalid after calling this function.
+   *
+   * @return an upgraded ReadPageGuard
+   */
+  auto UpgradeRead() -> ReadPageGuard;
+
+  /** TODO(P2): Add implementation
+   *
+   * @brief Upgrade a BasicPageGuard to a WritePageGuard
+   *
+   * The protected page is not evicted from the buffer pool during the upgrade,
+   * and the basic page guard should be made invalid after calling this function.
+   *
+   * @return an upgraded WritePageGuard
+   */
+  auto UpgradeWrite() -> WritePageGuard;
 
   auto PageId() -> page_id_t { return page_->GetPageId(); }
 
@@ -94,7 +121,7 @@ class ReadPageGuard {
   ReadPageGuard(const ReadPageGuard &) = delete;
   auto operator=(const ReadPageGuard &) -> ReadPageGuard & = delete;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Move constructor for ReadPageGuard
    *
@@ -104,7 +131,7 @@ class ReadPageGuard {
    */
   ReadPageGuard(ReadPageGuard &&that) noexcept;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Move assignment for ReadPageGuard
    *
@@ -113,7 +140,7 @@ class ReadPageGuard {
    */
   auto operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard &;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Drop a ReadPageGuard
    *
@@ -124,7 +151,7 @@ class ReadPageGuard {
    */
   void Drop();
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Destructor for ReadPageGuard
    *
@@ -154,7 +181,7 @@ class WritePageGuard {
   WritePageGuard(const WritePageGuard &) = delete;
   auto operator=(const WritePageGuard &) -> WritePageGuard & = delete;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Move constructor for WritePageGuard
    *
@@ -164,7 +191,7 @@ class WritePageGuard {
    */
   WritePageGuard(WritePageGuard &&that) noexcept;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Move assignment for WritePageGuard
    *
@@ -173,7 +200,7 @@ class WritePageGuard {
    */
   auto operator=(WritePageGuard &&that) noexcept -> WritePageGuard &;
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Drop a WritePageGuard
    *
@@ -184,7 +211,7 @@ class WritePageGuard {
    */
   void Drop();
 
-  /** TODO(P1): Add implementation
+  /** TODO(P2): Add implementation
    *
    * @brief Destructor for WritePageGuard
    *

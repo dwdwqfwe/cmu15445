@@ -12,10 +12,14 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "common/rid.h"
+#include "concurrency/transaction.h"
+#include "concurrency/transaction_manager.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/update_plan.h"
@@ -64,7 +68,12 @@ class UpdateExecutor : public AbstractExecutor {
   /** Metadata identifying the table that should be updated */
   const TableInfo *table_info_;
 
+  bool is_insert_{false};
   /** The child executor to obtain value from */
   std::unique_ptr<AbstractExecutor> child_executor_;
+  Transaction *txn_;
+  TransactionManager *txn_manager_;
+  std::vector<std::pair<Tuple, RID>> tuple_store_;
+  uint32_t iter_;
 };
 }  // namespace bustub

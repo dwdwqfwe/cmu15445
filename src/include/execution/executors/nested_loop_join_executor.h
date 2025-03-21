@@ -12,9 +12,12 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <utility>
+#include <vector>
 
+#include "common/rid.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/nested_loop_join_plan.h"
@@ -55,6 +58,14 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
  private:
   /** The NestedLoopJoin plan node to be executed. */
   const NestedLoopJoinPlanNode *plan_;
+  std::unique_ptr<AbstractExecutor> left_child_exec_;
+  std::unique_ptr<AbstractExecutor> right_child_exec_;
+  Tuple left_tuple_{};
+  Tuple right_tuple_{};
+  RID left_rid_;
+  RID right_rid_;
+  bool left_has_tuple_;
+  bool has_done_;
 };
 
 }  // namespace bustub

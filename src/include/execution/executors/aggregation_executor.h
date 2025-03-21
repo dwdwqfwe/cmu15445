@@ -17,16 +17,137 @@
 #include <utility>
 #include <vector>
 
+#include "common/logger.h"
 #include "common/util/hash_util.h"
 #include "container/hash/hash_function.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/expressions/abstract_expression.h"
 #include "execution/plans/aggregation_plan.h"
+#include "execution/plans/window_plan.h"
 #include "storage/table/tuple.h"
+#include "type/type.h"
+#include "type/type_id.h"
+#include "type/value.h"
 #include "type/value_factory.h"
 
 namespace bustub {
+
+/**
+ * A simplified hash table that has all the necessary functionality for window functions
+ */
+class SimpleWindowHashTable {
+ public:
+  /**
+   * Construct a new SimpleWindowHashTable instance.
+   * @param window_agg_exprs the window aggregation expressions
+   * @param window_agg_types the types of window aggregations
+   */
+  explicit SimpleWindowHashTable(const WindowFunctionType &window_function_type)
+      : window_function_type_(window_function_type) {}
+
+  /** @return The initial window aggregate value for this window executor*/
+  auto GenerateInitialWindowAggregateValue() -> Value {
+    Value value;
+    switch (window_function_type_) {
+      case WindowFunctionType::CountStarAggregate:
+        return ValueFactory::GetIntegerValue(0);
+      case WindowFunctionType::Rank:
+      case WindowFunctionType::CountAggregate:
+      case WindowFunctionType::SumAggregate:
+      case WindowFunctionType::MinAggregate:
+      case WindowFunctionType::MaxAggregate:
+        return ValueFactory::GetNullValueByType(TypeId::INTEGER);
+    }
+    return {};
+  }
+
+  /**
+   * Combines the input into the aggregation result.
+   * @param[out] result The output rows of aggregate value corresponding to one key
+   * @param input The input value
+   */
+  auto CombineAggregateValues(Value *result, const Value &input) -> Value {
+    Value &old_val = *result;
+    const Value &new_val = input;
+    switch (window_function_type_) {
+      case WindowFunctionType::CountStarAggregate:
+        old_val = old_val.Add(Value(TypeId::INTEGER, 1));
+        break;
+      case WindowFunctionType::CountAggregate:
+        if (!new_val.IsNull()) {
+          if (old_val.IsNull()) {
+            old_val = ValueFactory::GetIntegerValue(0);
+          }
+          old_val = old_val.Add(Value(TypeId::INTEGER, 1));
+        }
+        break;
+      case WindowFunctionType::SumAggregate:
+        if (!new_val.IsNull()) {
+          if (old_val.IsNull()) {
+            old_val = new_val;
+          } else {
+            old_val = old_val.Add(new_val);
+          }
+        }
+        break;
+      case WindowFunctionType::MinAggregate:
+        if (!new_val.IsNull()) {
+          if (old_val.IsNull()) {
+            old_val = new_val;
+          } else {
+            old_val = new_val.CompareLessThan(old_val) == CmpBool::CmpTrue ? new_val.Copy() : old_val;
+          }
+        }
+        break;
+      case WindowFunctionType::MaxAggregate:
+        if (!new_val.IsNull()) {
+          if (old_val.IsNull()) {
+            old_val = new_val;
+          } else {
+            old_val = new_val.CompareGreaterThan(old_val) == CmpBool::CmpTrue ? new_val.Copy() : old_val;
+          }
+        }
+        break;
+      case WindowFunctionType::Rank:
+        ++rank_count_;
+        if (old_val.CompareEquals(new_val) != CmpBool::CmpTrue) {
+          old_val = new_val;
+          last_rank_count_ = rank_count_;
+        }
+        return ValueFactory::GetIntegerValue(last_rank_count_);
+    }
+    return old_val;
+  }
+
+  /**
+   * Inserts a value into the hash table and then combines it with the current aggregation
+   * @param win_key the key to be inserted
+   * @param win_val the value to be inserted
+   */
+  auto InsertCombine(const AggregateKey &win_key, const Value &win_value) -> Value {
+    if (ht_.count(win_key) == 0) {
+      ht_.insert({win_key, GenerateInitialWindowAggregateValue()});
+    }
+    return CombineAggregateValues(&ht_[win_key], win_value);
+  }
+
+  /**
+   * Find a value with give key
+   * @param win_key the key to be used to find its corresponding value
+   */
+  auto Find(const AggregateKey &win_key) -> Value { return ht_.find(win_key)->second; }
+  /**
+   * Clear the hash table
+   */
+  void Clear() { ht_.clear(); }
+
+ private:
+  const WindowFunctionType window_function_type_;
+  std::unordered_map<AggregateKey, Value> ht_;
+  uint32_t rank_count_ = 0;
+  uint32_t last_rank_count_ = 0;
+};
 
 /**
  * A simplified hash table that has all the necessary functionality for aggregations.
@@ -72,12 +193,50 @@ class SimpleAggregationHashTable {
    */
   void CombineAggregateValues(AggregateValue *result, const AggregateValue &input) {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
+      LOG_DEBUG("combin begin");
+      auto &old_value = result->aggregates_[i];
+      auto &new_value = input.aggregates_[i];
+      LOG_DEBUG("combin debug");
       switch (agg_types_[i]) {
         case AggregationType::CountStarAggregate:
+          old_value = old_value.Add(Value{TypeId::INTEGER, 1});
+          break;
         case AggregationType::CountAggregate:
+          if (!new_value.IsNull()) {
+            if (old_value.IsNull()) {
+              old_value = Value{TypeId::INTEGER, 1};
+            } else {
+              old_value = old_value.Add(Value{TypeId::INTEGER, 1});
+            }
+          }
+          break;
         case AggregationType::SumAggregate:
+          if (!new_value.IsNull()) {
+            if (old_value.IsNull()) {
+              old_value = Value({TypeId::INTEGER, 0});
+              old_value = old_value.Add(new_value);
+            } else {
+              old_value = old_value.Add(new_value);
+            }
+          }
+          break;
         case AggregationType::MinAggregate:
+          if (!new_value.IsNull()) {
+            if (old_value.IsNull()) {
+              old_value = new_value;
+            } else {
+              old_value = old_value.CompareLessThan(new_value) == CmpBool::CmpTrue ? old_value : new_value;
+            }
+          }
+          break;
         case AggregationType::MaxAggregate:
+          if (!new_value.IsNull()) {
+            if (old_value.IsNull()) {
+              old_value = new_value;
+            } else {
+              old_value = old_value.CompareLessThan(new_value) == CmpBool::CmpFalse ? old_value : new_value;
+            }
+          }
           break;
       }
     }
@@ -201,7 +360,9 @@ class AggregationExecutor : public AbstractExecutor {
 
   /** The child executor that produces tuples over which the aggregation is computed */
   std::unique_ptr<AbstractExecutor> child_executor_;
-
+  std::unique_ptr<SimpleAggregationHashTable> ht_;
+  std::unique_ptr<SimpleAggregationHashTable::Iterator> iter_;
+  bool is_inert_{false};
   /** Simple aggregation hash table */
   // TODO(Student): Uncomment SimpleAggregationHashTable aht_;
 

@@ -26,19 +26,20 @@
 
 namespace bustub {
 
-enum class AccessType { Unknown = 0, Get, Scan };
+enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
  public:
   auto FindDistance() -> size_t;
-  auto GetId()->frame_id_t;
-  auto Evictable()->bool;
-  auto SetTure()->void;
-  auto SetFalse()->void;
-  auto GetRealDistance()->size_t;
-  LRUKNode(frame_id_t frame_id,size_t k);
-  LRUKNode()=default;
-  auto GetList()->std::list<size_t>&;
+  auto GetId() -> frame_id_t;
+  auto Evictable() -> bool;
+  auto SetTure() -> void;
+  auto SetFalse() -> void;
+  auto GetRealDistance() -> size_t;
+  LRUKNode(frame_id_t frame_id, size_t k);
+  LRUKNode() = default;
+  auto GetList() -> std::list<size_t> &;
+
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
