@@ -95,9 +95,9 @@ class Transaction {
 
   DISALLOW_COPY(Transaction);
 
-  inline auto SetReadTs(timestamp_t begin_ts) -> void { read_ts_ = begin_ts; }
+  // inline auto SetReadTs(timestamp_t begin_ts) -> void { read_ts_ = begin_ts; }
 
-  inline auto SetCommit(timestamp_t end_ts) -> void { commit_ts_ = end_ts; }
+  // inline auto SetCommit(timestamp_t end_ts) -> void { commit_ts_ = end_ts; }
 
   /** @return the id of the thread running the transaction */
   inline auto GetThreadId() const -> std::thread::id { return thread_id_; }
